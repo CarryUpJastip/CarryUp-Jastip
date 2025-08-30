@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BerryBear Shop · Lotso风粉色主题（单页融合版）</title>
+<meta name="description" content="Lotso风格粉色主题的前端电商单页演示：分类/筛选/搜索/排序/购物车（localStorage）+ 第二页内容区（同页锚点）+ 6张轮播" />
+<style>
+  :root{
+    /* 主题色 */
+    --berry-900:#4b1230; --berry-800:#6d1a44; --berry-700:#8a2256;
+    --berry-600:#b33379; --berry-500:#ff4d9c; --berry-400:#ff7ab6;
+    --berry-300:#ff9cc8; --berry-200:#ffc7df; --berry-100:#ffe6f3;
+    --cream:#fff7fb; --ink:#361322; --muted:#7c4a5d; --gold:#ffdf86;
+
+    --bg1:#ffb6d9; --bg2:#ffe6f2;
+    --glass: rgba(255,255,255,.25);
+    --radius-2xl:24px; --radius-xl:18px; --radius-lg:14px;
+    --shadow-xl:0 22px 60px rgba(255,80,160,.22);
+    --shadow-card:0 10px 28px rgba(0,0,0,.18);
+    --wrap: 1200px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--ink); font:16px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,PingFang SC,\534E\6587,\9ED1\4F53,sans-serif;
+    background:
+      radial-gradient(120% 150% at 80% -10%, var(--bg1) 0%, #ffd6ea 36%, #ffeaf5 60%, var(--bg2) 100%),
+      linear-gradient(180deg, #fff0f7, #ffe6f2);
+    scroll-behavior:smooth;
+  }
+  a{color:inherit; text-decoration:none}
+  .wrap{max-width:var(--wrap); margin:28px auto; padding:0 16px}
+
+  .header{ position:relative; border-radius:var(--radius-2xl); overflow:hidden;
+    background:linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,.25));
+    backdrop-filter:saturate(130%) blur(12px);
+    box-shadow:var(--shadow-xl), inset 0 0 0 1px rgba(255,255,255,.35);
+  }
+  .header-inner{ display:flex; gap:16px; align-items:center; padding:16px; }
+  .logo{ display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:999px;
+    background:linear-gradient(90deg, var(--berry-600), var(--berry-400)); color:#fff; box-shadow:0 6px 16px rgba(255, 80, 160, .35); }
+  .logo-badge{ width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.18); }
+  .logo-title{ font-weight:900; letter-spacing:.3px; }
+
+  .search{ flex:1; position:relative; }
+  .search input{ width:100%; height:44px; padding:0 44px; border-radius:999px; outline:0; border:0; background:rgba(255,255,255,.9); box-shadow:inset 0 0 0 1px rgba(255,80,160,.2); }
+  .search svg{ position:absolute; left:14px; top:50%; transform:translateY(-50%); opacity:.6 }
+  .search .clear{ position:absolute; right:8px; top:4px; bottom:4px; width:36px; border-radius:999px; display:none; place-items:center; background:rgba(255,255,255,.8); }
+  .search .clear.show{ display:grid }
+
+  .actions{ display:flex; gap:10px; align-items:center }
+  .btn{ height:44px; padding:0 14px; display:inline-flex; align-items:center; gap:8px; border:0; border-radius:999px; cursor:pointer; font-weight:700 }
+  .btn.primary{ background:linear-gradient(90deg, var(--berry-600), var(--berry-400)); color:#fff; }
+  .btn.ghost{ background:rgba(255,255,255,.85); box-shadow:inset 0 0 0 1px rgba(255,80,160,.2); }
+  .btn.sm{ height:36px; padding:0 12px; font-size:14px }
+
+  .chips{ display:flex; gap:10px; flex-wrap:wrap; padding:12px 16px 16px; }
+  .chip{ padding:8px 12px; border-radius:999px; background:rgba(255,255,255,.9); box-shadow:inset 0 0 0 1px rgba(255,80,160,.2); cursor:pointer; font-weight:600 }
+  .chip.active{ background:linear-gradient(90deg,var(--berry-600),var(--berry-400)); color:#fff }
+
+  .layout{ display:grid; grid-template-columns:1fr; gap:16px; margin-top:14px; }
+
+  .filters{
+    position:fixed; top:0; left:0; height:100vh; width:360px; max-width:92vw;
+    display:none; transform:translateX(-110%); opacity:0; pointer-events:none;
+    z-index:1002; border-radius:0 20px 20px 0; overflow:auto;
+    background:linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,255,255,.85));
+    box-shadow:var(--shadow-card), inset 0 0 0 1px rgba(255,80,160,.25);
+    transition:transform .25s ease, opacity .25s ease;
+  }
+  .filters.show{ display:block; transform:translateX(0); opacity:1; pointer-events:auto }
+  .filters h3{ margin:0; padding:14px 16px; font-size:16px; background:linear-gradient(90deg, var(--berry-600), var(--berry-400)); color:#fff }
+  .filters-close{ position:absolute; right:10px; top:10px; width:36px; height:36px; border:0; border-radius:10px; background:rgba(0,0,0,.06); font-weight:900 }
+  .filter-sec{ padding:12px 16px; border-top:1px dashed rgba(255,80,160,.25) }
+  .filter-sec h4{ margin:6px 0 10px; font-size:13px; color:var(--muted); letter-spacing:.4px }
+  .check{ display:flex; align-items:center; gap:10px; margin:8px 0; cursor:pointer }
+  .check input{ width:16px; height:16px }
+  .tag-list{ display:flex; gap:8px; flex-wrap:wrap }
+  .tag{ padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.9); box-shadow:inset 0 0 0 1px rgba(255,80,160,.2); font-size:12px; cursor:pointer }
+  .tag.on{ background:linear-gradient(90deg,var(--berry-600),var(--berry-400)); color:#fff }
+  .range{ display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:center }
+  .range input[type=number]{ width:100%; padding:8px 10px; border-radius:10px; border:0; background:rgba(255,255,255,.9); box-shadow:inset 0 0 0 1px rgba(255,80,160,.2) }
+  .range input[type=range]{ width:100% }
+  .filter-actions{ display:flex; gap:10px; margin-top:10px }
+
+  .top-carousel{ margin:14px 0 4px; border-radius:var(--radius-2xl); overflow:hidden;
+    background:linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,.25));
+    box-shadow:var(--shadow-xl), inset 0 0 0 1px rgba(255,255,255,.35);
+  }
+
+  .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 2px 12px }
+  .toolbar .count{ font-weight:700; color:var(--berry-700) }
+  .toolbar select{ height:40px; padding:0 12px; border-radius:12px; border:0; background:rgba(255,255,255,.9); box-shadow:inset 0 0 0 1px rgba(255,80,160,.22); font-weight:600 }
+
+  .grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px }
+  .card{ position:relative; border-radius:20px; overflow:hidden;
+    background:linear-gradient(135deg, rgba(255,255,255,.8), rgba(255,255,255,.55));
+    box-shadow:var(--shadow-card), inset 0 0 0 1px rgba(255,255,255,.55); transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .card:hover{ transform:translateY(-3px); box-shadow:0 16px 36px rgba(255,80,160,.22) }
+  .thumb{ aspect-ratio: 4/3; display:grid; place-items:center; font-size:46px; font-weight:900; color:#fff; letter-spacing:.5px }
+  .thumb .sku{ font-size:12px; font-weight:700; opacity:.9; margin-top:6px }
+  .badge{ position:absolute; left:10px; top:10px; padding:6px 8px; font-size:12px; font-weight:800; border-radius:999px; color:#fff; box-shadow:0 6px 16px rgba(0,0,0,.15) }
+  .badge.new{ background:linear-gradient(90deg, #ff6fb3, #ff9cc8) }
+  .badge.hot{ background:linear-gradient(90deg, #ff7a7a, #ffb86c) }
+  .info{ padding:12px 12px 14px }
+  .name{ font-weight:800; margin:0 0 6px; letter-spacing:.2px }
+  .meta{ display:flex; align-items:center; gap:8px; color:var(--muted); font-size:12px }
+  .price{ margin-top:8px; font-weight:900; color:var(--berry-800) }
+  .addline{ display:flex; gap:8px; margin-top:10px }
+  .btn.cart{ flex:1; height:40px; border-radius:12px; background:linear-gradient(90deg,var(--berry-600),var(--berry-400)); color:#fff; box-shadow:0 10px 20px rgba(255,80,160,.25) }
+  .btn.like{ width:44px; height:40px; border-radius:12px; background:rgba(255,255,255,.85); box-shadow:inset 0 0 0 1px rgba(255,80,160,.25) }
+  .btn.like svg{ pointer-events:none }
+  .liked{ background:linear-gradient(90deg,#ff9cc8,#ffb6d9)!important }
+
+  .drawer-mask{ position:fixed; inset:0; background:rgba(0,0,0,.25); opacity:0; pointer-events:none; transition:.2s }
+  .drawer-mask.on{ opacity:1; pointer-events:auto }
+  .drawer{ position:fixed; top:0; right:-420px; width:360px; max-width:92vw; height:100vh; background:#fff; box-shadow:-12px 0 36px rgba(0,0,0,.2); transition:.25s; display:flex; flex-direction:column }
+  .drawer.show{ right:0 }
+  .drawer header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:linear-gradient(90deg,var(--berry-600),var(--berry-400)); color:#fff }
+  .cart-list{ padding:10px 12px; overflow:auto; flex:1; display:flex; flex-direction:column; gap:12px }
+  .cart-item{ display:grid; grid-template-columns:56px 1fr auto; gap:10px; align-items:center; padding:10px; border-radius:12px; background:linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.7)); box-shadow:inset 0 0 0 1px rgba(255,80,160,.2) }
+  .cart-thumb{ width:56px; height:56px; border-radius:10px }
+  .qty{ display:flex; align-items:center; gap:8px }
+  .qty button{ width:28px; height:28px; border-radius:8px; border:0; background:rgba(0,0,0,.06); font-weight:900 }
+  .drawer footer{ padding:12px; border-top:1px solid rgba(0,0,0,.06); display:grid; gap:10px }
+  .drawer .total{ display:flex; align-items:center; justify-content:space-between; font-weight:900; color:var(--berry-800) }
+  .drawer .checkout{ height:44px; border:0; border-radius:12px; background:linear-gradient(90deg,var(--berry-600),var(--berry-400)); color:#fff; font-weight:900 }
+
+  .carousel{ position:relative; border-radius:14px; overflow:hidden; background:rgba(255,255,255,.6); box-shadow:inset 0 0 0 1px rgba(255,80,160,.18) }
+  .carousel .slides{ display:flex; transition:transform .4s cubic-bezier(.2,.8,.2,1) }
+  .carousel .slide{ min-width:100%; aspect-ratio:16/9; display:block; position:relative }
+  .carousel .slide img{ width:100%; height:100%; object-fit:cover; display:block }
+  .carousel .nav{ position:absolute; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:10px; border:0; background:rgba(0,0,0,.15); color:#fff; font-size:20px; cursor:pointer }
+  .carousel .nav.prev{ left:8px } .carousel .nav.next{ right:8px }
+  .carousel .dots{ position:absolute; left:0; right:0; bottom:8px; display:flex; justify-content:center; gap:6px }
+  .carousel .dot{ width:8px; height:8px; border-radius:999px; background:rgba(255,255,255,.6); cursor:pointer }
+  .carousel .dot.active{ background:#fff }
+
+  .page2{ scroll-margin-top:16px; margin-top:24px }
+  .hero{position:relative;border-radius:var(--radius-2xl);overflow:hidden;background:linear-gradient(135deg,#ff7ab6,#ff9cc8)}
+  .hero::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 100% at 80% -20%, rgba(255,255,255,.35), rgba(255,255,255,0) 60%)}
+  .hero-in{position:relative;padding:36px 20px;color:#fff;text-align:center;text-shadow:0 2px 12px rgba(0,0,0,.25)}
+  .hero h1{margin:0 0 8px;font-size:clamp(22px,5.6vw,42px);letter-spacing:.5px}
+  .hero p{margin:0;opacity:.95}
+  .note{text-align:center;color:var(--muted);font-size:14px;margin:10px 0 16px}
+  .p2-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:12px}
+  .p2-card{border-radius:16px;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(255,255,255,.7));box-shadow:var(--shadow-card),inset 0 0 0 1px rgba(255,80,160,.18)}
+  .p2-thumb{aspect-ratio:4/3;background:linear-gradient(135deg,#ff7ab6,#ffc7df);display:grid;place-items:center;color:#fff;font-weight:900}
+  .p2-body{padding:12px}
+  .p2-title{margin:0 0 6px;font-weight:900}
+  .p2-desc{margin:0;color:var(--muted)}
+
+  .bottom-cta{ position:fixed; left:50%; transform:translateX(-50%); bottom:14px; z-index:1001;
+    background:linear-gradient(90deg, var(--berry-600), var(--berry-400)); color:#fff;
+    font-weight:900; padding:12px 18px; border-radius:999px; box-shadow:0 12px 28px rgba(255,80,160,.35);
+    display:inline-flex; align-items:center; gap:8px; }
+
+  @media (max-width: 980px){ .grid{ grid-template-columns:repeat(2,1fr) } .p2-grid{ grid-template-columns:repeat(2,1fr) } }
+  @media (max-width: 560px){ .grid{ grid-template-columns:1fr } .p2-grid{ grid-template-columns:1fr } .header-inner{ flex-wrap:wrap } }
+</style>
+
+<body id="top">
+  <div class="wrap">
+
+    <div class="header">
+      <div class="header-inner">
+        <a class="logo" href="#top">
+          <div class="logo-badge" aria-hidden="true"><span>🍓</span></div>
+          <div class="logo-title">CarryUp Jastip</div>
+        </a>
+        <div class="search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.2-4.2" stroke="#9c5573" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="#9c5573" stroke-width="2"/></svg>
+          <input id="q" type="search" placeholder="搜索商品：草莓、玩偶、杯子…（支持中英文）" />
+          <button id="clearQ" class="clear">✕</button>
+        </div>
+        <div class="actions">
+          <button id="openFilters" class="btn ghost" title="筛选"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M7 12h10M10 17h4" stroke="#b33379" stroke-width="2" stroke-linecap="round"/></svg>Filter</button>
+          <button id="openCart" class="btn primary" title="购物车"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6h14l-1.2 7.2a2 2 0 0 1-2 1.8H9.4a2 2 0 0 1-2-1.4L5 4H2" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="20" r="1.5" fill="#fff"/><circle cx="18" cy="20" r="1.5" fill="#fff"/></svg><span id="cartNum">0</span></button>
+        </div>
+      </div>
+      <div class="chips" id="chipBar"></div>
+    </div>
+
+    <section class="top-carousel">
+      <div class="carousel" id="topCarousel">
+        <div class="slides">
+          <div class="slide"><img src="https://imgur.com/DYyNLVL.png" alt="Top promo 1"></div>
+          <div class="slide"><img src="https://imgur.com/HJfqKAG.png" alt="Top promo 2"></div>
+          <div class="slide"><img src="https://imgur.com/VMRiJ6v.png" alt="Top promo 3"></div>
+          <div class="slide"><img src="https://imgur.com/CFLaxzy.png" alt="Top promo 4"></div>
+          <div class="slide"><img src="https://imgur.com/qcVLnju.png" alt="Top promo 5"></div>
+          <div class="slide"><img src="https://imgur.com/kVYVOtT.png" alt="Top promo 6"></div>
+        </div>
+        <button class="nav prev" aria-label="上一张">‹</button>
+        <button class="nav next" aria-label="下一张">›</button>
+        <div class="dots"></div>
+      </div>
+    </section>
+
+    <div class="layout">
+
+      <aside class="filters" id="filters">
+        <h3>Filter</h3>
+        <button id="closeFilters" class="filters-close" aria-label="关闭筛选">✕</button>
+
+        <div class="filter-sec" id="catSec">
+          <h4>Catogories</h4>
+          <div id="catList"></div>
+        </div>
+
+        <div class="filter-sec">
+          <h4>Price Between</h4>
+          <div class="range">
+            <label>
+              <small>Minimal Price</small>
+              <input type="number" id="minPrice" min="0" step="10" placeholder="0" />
+            </label>
+            <label>
+              <small>Maximun Price</small>
+              <input type="number" id="maxPrice" min="0" step="10" placeholder="9999" />
+            </label>
+          </div>
+          <div class="range" style="margin-top:6px">
+            <input type="range" id="minRange" min="0" max="9999" step="10" value="0" />
+            <input type="range" id="maxRange" min="0" max="9999" step="10" value="9999" />
+          </div>
+          <div class="filter-actions">
+            <button id="resetPrice" class="btn sm ghost">Reset Price</button>
+          </div>
+        </div>
+
+        <div class="filter-sec">
+          <h4>Recommend</h4>
+          <div class="carousel" id="promoCarousel">
+            <div class="slides">
+              <div class="slide"><img src="https://imgur.com/kVYVOtT.png" alt="promo 1"></div>
+              <div class="slide"><img src="https://imgur.com/kVYVOtT.png" alt="promo 2"></div>
+              <div class="slide"><img src="https://imgur.com/kVYVOtT.png" alt="promo 3"></div>
+              <div class="slide"><img src="https://imgur.com/kVYVOtT.png" alt="promo 4"></div>
+              <div class="slide"><img src="https://imgur.com/kVYVOtT.png" alt="promo 5"></div>
+              <div class="slide"><img src="https://imgur.com/kVYVOtT.png" alt="promo 6"></div>
+            </div>
+            <button class="nav prev" aria-label="上一张">‹</button>
+            <button class="nav next" aria-label="下一张">›</button>
+            <div class="dots"></div>
+          </div>
+        </div>
+
+        <div class="filter-sec">
+          <h4>Tag</h4>
+          <div class="tag-list" id="tagList"></div>
+        </div>
+        <div class="filter-sec">
+          <h4>Control</h4>
+          <div class="filter-actions">
+            <button id="applyFilters" class="btn sm primary">Choosed Filtered</button>
+            <button id="resetAll" class="btn sm ghost">Reset All</button>
+          </div>
+        </div>
+        <div class="filter-sec">
+          <h4>More</h4>
+          <a href="#page2" class="btn sm primary" style="width:100%;justify-content:center;display:inline-flex;">Go To Page 2 →</a>
+        </div>
+      </aside>
+
+      <section>
+        <div class="toolbar">
+          <div class="count">Total <span id="count">0</span> Item</div>
+          <div>
+            <select id="sorter">
+              <option value="pop">Sort:Top View</option>
+              <option value="new">Newly</option>
+              <option value="priceAsc">Price:From Lowest</option>
+              <option value="priceDesc">Price:Highest</option>
+              <option value="name">Named A→Z</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid" id="grid"></div>
+      </section>
+    </div>
+
+    <section id="page2" class="page2">
+      <div class="hero">
+        <div class="hero-in">
+          <h1>Page 2 · Featured Activities</h1>
+          <p>Never Lost Your Choice Ever At Here!</p>
+          <div style="margin-top:10px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <a class="btn primary" href="#top">← 回到顶部</a>
+            <a class="btn ghost" href="#grid">回到商品区</a>
+          </div>
+        </div>
+      </div>
+      <p class="note">以下为示例区块，你可替换为长图、规则、二维码等。</p>
+      <div class="p2-grid">
+        <article class="p2-card">
+          <div class="p2-thumb">会场 A</div>
+          <div class="p2-body">
+            <h3 class="p2-title">抱抱熊玩偶专区</h3>
+            <p class="p2-desc">展示更多 Lotso 风玩偶、周边礼盒。按钮可链接到对应分类。</p>
+          </div>
+        </article>
+        <article class="p2-card">
+          <div class="p2-thumb" style="background:linear-gradient(135deg,#b33379,#ff7ab6)">会场 B</div>
+          <div class="p2-body">
+            <h3 class="p2-title">家居好物与杯具</h3>
+            <p class="p2-desc">可放长图或图文说明；也可放下载引导、FAQ。</p>
+          </div>
+        </article>
+        <article class="p2-card">
+          <div class="p2-thumb" style="background:linear-gradient(135deg,#ffb6d9,#ffe6f3);color:#361322">会场 C</div>
+          <div class="p2-body">
+            <h3 class="p2-title">服饰与配件</h3>
+            <p class="p2-desc">继续扩展你的二级内容，不影响首页购物车逻辑。</p>
+          </div>
+        </article>
+      </div>
+      <div style="display:flex; justify-content:center; margin:18px 0 4px; gap:10px; flex-wrap:wrap;">
+        <a class="btn primary" href="#top">← 返回顶部继续购物</a>
+      </div>
+    </section>
+  </div>
+
+  <div class="drawer" id="cart">
+    <header>
+      <div style="font-weight:900">🛒 我的购物车</div>
+      <button id="closeCart" class="btn sm" style="background:rgba(255,255,255,.2); color:#fff">关闭</button>
+    </header>
+    <div class="cart-list" id="cartList"></div>
+    <footer>
+      <div class="total"><span>合计</span><span id="cartTotal">₹0</span></div>
+      <button class="checkout" id="checkout">去结算</button>
+      <small style="opacity:.7;text-align:center">本演示仅前端，无真实支付流程</small>
+    </footer>
+  </div>
+  <div class="drawer-mask" id="mask"></div>
+
+  <a href="#page2" class="bottom-cta" title="前往第 2 区域">前往第 2 区域 →</a>
+
+<script>
+
+const PRODUCTS = [
+  {id:"BB001", name:"草莓抱抱熊 · 中号玩偶", price:1299, category:"Plush", color:"pink", tags:["绒毛","草莓香","礼物"], popularity:98, addedAt:"2025-08-10", badge:"hot", hue:[255,105,180]},
+  {id:"BB002", name:"草莓奶昔 · 香薰蜡烛", price:699, category:"Home", color:"cream", tags:["香薰","居家","放松"], popularity:78, addedAt:"2025-07-29", badge:"new", hue:[255,160,200]},
+  {id:"BB003", name:"浆果贴纸包 · 30枚", price:199, category:"Stationery", color:"pink", tags:["手账","可爱","DIY"], popularity:72, addedAt:"2025-07-22", hue:[255,140,190]},
+  {id:"BB004", name:"软糖粉 · 双肩小背包", price:1599, category:"Accessories", color:"rose", tags:["出行","轻便","礼物"], popularity:90, addedAt:"2025-08-05", hue:[255,95,160]},
+  {id:"BB005", name:"草莓牛奶 · 保温杯 480ml", price:899, category:"Home", color:"cream", tags:["随行","保温","上班族"], popularity:88, addedAt:"2025-07-30", hue:[255,170,210]},
+  {id:"BB006", name:"棉花糖T恤 · 玫粉款", price:1099, category:"Apparel", color:"pink", tags:["短袖","柔软","日常"], popularity:74, addedAt:"2025-07-08", hue:[255,110,175]},
+  {id:"BB007", name:"莓果绒 · 大号抱枕", price:1299, category:"Home", color:"rose", tags:["午睡","沙发","治愈"], popularity:81, addedAt:"2025-08-02", hue:[255,120,190]},
+  {id:"BB008", name:"泡泡糖 · 钥匙扣挂件", price:149, category:"Accessories", color:"pink", tags:["钥匙扣","小物","随机"], popularity:69, addedAt:"2025-07-12", hue:[255,125,200]},
+  {id:"BB009", name:"浆果日记本 · A5", price:329, category:"Stationery", color:"cream", tags:["手账","空白页","学生"], popularity:66, addedAt:"2025-07-15", hue:[255,180,220]},
+  {id:"BB010", name:"棉花糖渔夫帽 · 粉白", price:799, category:"Apparel", color:"cream", tags:["夏日","防晒","出街"], popularity:61, addedAt:"2025-07-18", hue:[255,190,220]},
+  {id:"BB011", name:"莓莓脆乐 · 饼干礼盒", price:599, category:"Snacks", color:"rose", tags:["零食","分享","下午茶"], popularity:83, addedAt:"2025-07-25", hue:[255,100,160]},
+  {id:"BB012", name:"草莓牛乳 · 手机壳", price:459, category:"Accessories", color:"pink", tags:["手机壳","防摔","可爱"], popularity:77, addedAt:"2025-07-20", hue:[255,120,200]},
+  {id:"BB013", name:"莓果马克杯 · 350ml", price:449, category:"Home", color:"cream", tags:["杯子","办公","送礼"], popularity:65, addedAt:"2025-06-28", hue:[255,160,210]},
+  {id:"BB014", name:"莓果抱抱熊 · 钥匙圈", price:179, category:"Accessories", color:"rose", tags:["小礼物","情侣","随机"], popularity:59, addedAt:"2025-06-30", hue:[255,105,175]},
+  {id:"BB015", name:"莓果涂鸦笔 · 6色套装", price:269, category:"Stationery", color:"pink", tags:["彩笔","绘画","文具"], popularity:57, addedAt:"2025-06-26", hue:[255,135,205]},
+  {id:"BB016", name:"奶霜连帽衫 · 玫粉", price:1999, category:"Apparel", color:"rose", tags:["外套","秋季","保暖"], popularity:92, addedAt:"2025-08-08", badge:"hot", hue:[255,90,160]},
+  {id:"BB017", name:"莓果云 · 记忆棉拖鞋", price:699, category:"Home", color:"cream", tags:["拖鞋","室内","柔软"], popularity:71, addedAt:"2025-07-05", hue:[255,180,225]},
+  {id:"BB018", name:"棉花糖帆布袋 · 心形徽标", price:499, category:"Accessories", color:"cream", tags:["环保袋","大容量","通勤"], popularity:84, addedAt:"2025-07-27", hue:[255,175,215]},
+  {id:"BB019", name:"莓果软糖 · 零食罐", price:349, category:"Snacks", color:"pink", tags:["零食","软糖","果味"], popularity:58, addedAt:"2025-06-18", hue:[255,135,210]},
+  {id:"BB020", name:"草莓奶泡 · 沐浴球", price:199, category:"Home", color:"pink", tags:["浴室","香氛","放松"], popularity:52, addedAt:"2025-06-12", hue:[255,140,215]},
+  {id:"BB021", name:"莓果贴布 · 衣物点缀", price:129, category:"Stationery", color:"rose", tags:["贴布","DIY","小物"], popularity:41, addedAt:"2025-06-06", hue:[255,100,170]},
+  {id:"BB022", name:"莓果发箍 · 柔软绒面", price:239, category:"Accessories", color:"pink", tags:["发箍","居家","洗脸"], popularity:49, addedAt:"2025-06-01", hue:[255,125,195]},
+  {id:"BB023", name:"奶盖睡裤 · 粉白格", price:1299, category:"Apparel", color:"cream", tags:["睡衣","家居","套装"], popularity:64, addedAt:"2025-05-22", hue:[255,200,230]},
+  {id:"BB024", name:"莓果纸胶带 · 3卷装", price:169, category:"Stationery", color:"pink", tags:["手账","装饰","文具"], popularity:38, addedAt:"2025-05-10", hue:[255,150,215]}
+];
+
+const CATEGORIES = ["All","Plush","Accessories","Home","Stationery","Apparel","Snacks"];
+const TAGS = ["绒毛","草莓香","礼物","随行","居家","可爱","限定","学生","手账","DIY","零食","出行","上班族","保暖","夏日","防晒"];
+
+const state = {
+  q:"",
+  selectedCat:"All",
+  selectedCats:new Set(),
+  minPrice:0,
+  maxPrice:9999,
+  tags:new Set(),
+  sort:"pop",
+  likes:new Set(JSON.parse(localStorage.getItem('bb_likes')||'[]')),
+  cart: JSON.parse(localStorage.getItem('bb_cart') || '[]') // [{id, qty}]
+};
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+function fmtPrice(n){ return '₹' + n.toLocaleString('en-IN'); }
+function byId(id){ return PRODUCTS.find(p=>p.id===id); }
+function saveCart(){ localStorage.setItem('bb_cart', JSON.stringify(state.cart)); updateCartUI(); }
+function saveLikes(){ localStorage.setItem('bb_likes', JSON.stringify([...state.likes])); }
+function debounce(fn, ms=220){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); } }
+function countByCategory(list){ const m={}; list.forEach(p=>{ m[p.category]=(m[p.category]||0)+1; }); return m; }
+
+function initChips(){
+  const bar = $('#chipBar');
+  bar.innerHTML = CATEGORIES.map(c=>`<div class="chip${c==='All'?' active':''}" data-cat="${c}">${c}</div>`).join('');
+  bar.addEventListener('click', e=>{
+    const chip = e.target.closest('.chip'); if(!chip) return;
+    $$('#chipBar .chip').forEach(x=>x.classList.remove('active'));
+    chip.classList.add('active');
+    state.selectedCat = chip.dataset.cat;
+    render();
+  });
+}
+function initCats(){
+  const list = $('#catList');
+  const counts = countByCategory(PRODUCTS);
+  list.innerHTML = CATEGORIES.filter(c=>c!=='All').map(c=>`
+    <label class="check"><input type="checkbox" data-cat="${c}" ${state.selectedCats.has(c)?'checked':''}/><span>${c}（${counts[c]||0}）</span></label>
+  `).join('');
+  list.addEventListener('change', e=>{
+    const ck = e.target.closest('input[type=checkbox]'); if(!ck) return;
+    ck.checked ? state.selectedCats.add(ck.dataset.cat) : state.selectedCats.delete(ck.dataset.cat);
+  });
+}
+function initTags(){
+  const box = $('#tagList');
+  box.innerHTML = TAGS.map(t=>`<div class="tag" data-tag="${t}">${t}</div>`).join('');
+  box.addEventListener('click', e=>{
+    const tg = e.target.closest('.tag'); if(!tg) return;
+    const key = tg.dataset.tag;
+    if(state.tags.has(key)){ state.tags.delete(key); tg.classList.remove('on'); }
+    else{ state.tags.add(key); tg.classList.add('on'); }
+  });
+}
+function initSearch(){
+  const q = $('#q');
+  const clear = $('#clearQ');
+  q.addEventListener('input', debounce(()=>{ state.q = q.value.trim(); clear.classList.toggle('show', !!state.q); render(); }, 180));
+  clear.addEventListener('click', ()=>{ q.value=''; state.q=''; clear.classList.remove('show'); render(); });
+}
+function initPrice(){
+  const minI=$('#minPrice'), maxI=$('#maxPrice'), minR=$('#minRange'), maxR=$('#maxRange');
+  const sync = ()=>{
+    let min=Math.max(0, Number(minI.value||0));
+    let max=Math.max(min, Number(maxI.value||9999));
+    minR.value=Math.min(min, maxR.value);
+    maxR.value=Math.max(max, minR.value);
+    state.minPrice=Number(minR.value); state.maxPrice=Number(maxR.value);
+  };
+  const syncFromRange=()=>{
+    let a=Number(minR.value), b=Number(maxR.value);
+    if(a>b){ [a,b]=[b,a]; minR.value=a; maxR.value=b; }
+    minI.value=a; maxI.value=b; state.minPrice=a; state.maxPrice=b;
+  };
+  $('#resetPrice').addEventListener('click',()=>{ minI.value='0'; maxI.value='9999'; minR.value=0; maxR.value=9999; state.minPrice=0; state.maxPrice=9999; render(); });
+  [minI,maxI].forEach(el=>el.addEventListener('input',()=>{ sync(); render(); }));
+  [minR,maxR].forEach(el=>el.addEventListener('input',()=>{ syncFromRange(); render(); }));
+}
+function initSort(){ const s=$('#sorter'); s.value=state.sort; s.addEventListener('change',()=>{ state.sort=s.value; render(); }); }
+function initFilterButtons(){
+  $('#applyFilters').addEventListener('click',()=>{ render(); $('#filters').classList.remove('show'); $('#mask').classList.remove('on'); });
+  $('#resetAll').addEventListener('click',()=>{
+    state.selectedCats.clear();
+    state.tags.clear();
+    state.minPrice=0; state.maxPrice=9999;
+    $('#minPrice').value='0'; $('#maxPrice').value='9999';
+    $('#minRange').value=0; $('#maxRange').value=9999;
+    $$('#catList input[type=checkbox]').forEach(x=>x.checked=false);
+    $$('#tagList .tag').forEach(x=>x.classList.remove('on'));
+    render();
+  });
+
+  $('#openFilters').addEventListener('click',()=>{ $('#filters').classList.add('show'); $('#mask').classList.add('on'); });
+  $('#closeFilters').addEventListener('click',()=>{ $('#filters').classList.remove('show'); $('#mask').classList.remove('on'); });
+}
+
+function render(){
+  let data = [...PRODUCTS];
+  if(state.selectedCat && state.selectedCat!=='All') data = data.filter(p=>p.category===state.selectedCat);
+  if(state.selectedCats.size>0) data = data.filter(p=> state.selectedCats.has(p.category));
+  if(state.tags.size>0) data = data.filter(p=> p.tags.some(t=>state.tags.has(t)));
+  data = data.filter(p=> p.price>=state.minPrice && p.price<=state.maxPrice);
+  if(state.q){ const q = state.q.toLowerCase(); data = data.filter(p=> ( p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || p.tags.join(',').toLowerCase().includes(q) || p.id.toLowerCase().includes(q) )); }
+  switch(state.sort){
+    case 'pop': data.sort((a,b)=>b.popularity-a.popularity); break;
+    case 'new': data.sort((a,b)=> new Date(b.addedAt)-new Date(a.addedAt)); break;
+    case 'priceAsc': data.sort((a,b)=>a.price-b.price); break;
+    case 'priceDesc': data.sort((a,b)=>b.price-a.price); break;
+    case 'name': data.sort((a,b)=> a.name.localeCompare(b.name,'zh-Hans')); break;
+  }
+  $('#count').textContent = data.length;
+  const grid = $('#grid'); grid.innerHTML = data.map(p=> cardHTML(p)).join('');
+  grid.querySelectorAll('[data-like]').forEach(btn=>{ btn.addEventListener('click',()=>{ const id=btn.dataset.like; if(state.likes.has(id)) state.likes.delete(id); else state.likes.add(id); saveLikes(); btn.classList.toggle('liked', state.likes.has(id)); }); });
+  grid.querySelectorAll('[data-add]').forEach(btn=>{ btn.addEventListener('click',()=>{ addToCart(btn.dataset.add); animateAdd(btn); }); });
+}
+function cardHTML(p){
+  const grad = `linear-gradient(135deg, rgba(${p.hue[0]},${p.hue[1]-40||100},${p.hue[2]-20||160},.95), rgba(${p.hue[0]},${p.hue[1]},${p.hue[2]},.85))`;
+  return `
+  <article class="card">
+    ${p.badge?`<div class="badge ${p.badge}">${p.badge==='hot'?'热卖':'上新'}</div>`:''}
+    <div class="thumb" style="background:${grad};">
+      <div style="text-align:center">
+        <div>${emojiFor(p.category)} ${p.category}</div>
+        <div class="sku">SKU · ${p.id}</div>
+      </div>
+    </div>
+    <div class="info">
+      <h4 class="name">${p.name}</h4>
+      <div class="meta"><span>颜色：${p.color}</span><span>·</span><span>标签：${p.tags.slice(0,2).join('、')}</span></div>
+      <div class="price">${fmtPrice(p.price)}</div>
+      <div class="addline">
+        <button class="btn cart" data-add="${p.id}">加入购物车</button>
+        <button class="btn like ${state.likes.has(p.id)?'liked':''}" data-like="${p.id}" title="喜欢">❤</button>
+      </div>
+    </div>
+  </article>`;
+}
+function emojiFor(cat){ switch(cat){ case 'Plush': return '🧸'; case 'Accessories': return '🎀'; case 'Home': return '🏠'; case 'Stationery': return '📒'; case 'Apparel': return '👚'; case 'Snacks': return '🍬'; default: return '🍓'; } }
+
+function addToCart(id){ const it = state.cart.find(x=>x.id===id); if(it) it.qty += 1; else state.cart.push({id, qty:1}); saveCart(); }
+function removeFromCart(id){ state.cart = state.cart.filter(x=>x.id!==id); saveCart(); }
+function changeQty(id, d){ const it = state.cart.find(x=>x.id===id); if(!it) return; it.qty = Math.max(1, it.qty + d); saveCart(); }
+function cartSummary(){ let total=0, num=0; for(const it of state.cart){ const p = byId(it.id); if(!p) continue; total += p.price * it.qty; num += it.qty; } return {total, num}; }
+function updateCartUI(){ const list = $('#cartList'); if(state.cart.length===0){ list.innerHTML = `<div style="padding:14px;opacity:.6">购物车空空如也～去挑点草莓粉好物吧！</div>`; } else { list.innerHTML = state.cart.map(it=>{ const p = byId(it.id); if(!p) return ''; const grad = `linear-gradient(135deg, rgba(${p.hue[0]},${p.hue[1]-40||100},${p.hue[2]-20||160},.95), rgba(${p.hue[0]},${p.hue[1]},${p.hue[2]},.85))`; return `<div class="cart-item"><div class="cart-thumb" style="background:${grad}"></div><div><div style="font-weight:800">${p.name}</div><div style="opacity:.65; font-size:12px">${p.id} · ${p.color}</div><div style="margin-top:6px; font-weight:900">${fmtPrice(p.price)}</div></div><div class="qty"><button aria-label="减少" onclick="changeQty('${p.id}',-1)">–</button><div>${it.qty}</div><button aria-label="增加" onclick="changeQty('${p.id}',1)">+</button><button aria-label="删除" title="移除" onclick="removeFromCart('${p.id}')" style="margin-left:8px;background:rgba(255,0,0,.08);">✕</button></div></div>`; }).join(''); } const {total,num} = cartSummary(); $('#cartTotal').textContent = fmtPrice(total); $('#cartNum').textContent = num; }
+
+$('#openCart').addEventListener('click', ()=>{ $('#cart').classList.add('show'); $('#mask').classList.add('on'); });
+$('#closeCart').addEventListener('click', ()=>{ $('#cart').classList.remove('show'); $('#mask').classList.remove('on'); });
+$('#mask').addEventListener('click', ()=>{ $('#cart').classList.remove('show'); $('#filters').classList.remove('show'); $('#mask').classList.remove('on'); });
+
+$('#checkout').addEventListener('click', ()=>{ const {total,num} = cartSummary(); if(num===0) { alert('购物车为空哦～'); return; } alert(`本演示为前端示例\n共 ${num} 件，合计 ${fmtPrice(total)}\n请对接后端/第三方支付再实现结算流程。`); });
+
+function animateAdd(btn){ btn.animate([{ transform:'scale(1)' },{ transform:'scale(1.06)' },{ transform:'scale(1)' }], { duration:220, easing:'cubic-bezier(.2,.8,.2,1)' }); }
+
+function initCarouselById(rootId){
+  const root = document.getElementById(rootId); if(!root) return;
+  const slides = root.querySelector('.slides');
+  const items = Array.from(root.querySelectorAll('.slide'));
+  const dotsBox = root.querySelector('.dots');
+  let i=0, n=items.length, timer;
+  function go(k){ i=(k+n)%n; slides.style.transform='translateX(' + (-i*100) + '%)'; dotsBox.querySelectorAll('.dot').forEach((d,idx)=> d.classList.toggle('active', idx===i)); }
+  function next(){ go(i+1); }
+  function prev(){ go(i-1); }
+  function auto(){ clearInterval(timer); timer=setInterval(next, 3500); }
+  dotsBox.innerHTML = items.map((_,idx)=>'<div class="dot'+(idx===0?' active':'')+'"></div>').join('');
+  dotsBox.addEventListener('click', e=>{ const dot=e.target.closest('.dot'); if(!dot) return; go([...dotsBox.children].indexOf(dot)); auto(); });
+  const nextBtn = root.querySelector('.nav.next'); if(nextBtn) nextBtn.addEventListener('click', ()=>{ next(); auto(); });
+  const prevBtn = root.querySelector('.nav.prev'); if(prevBtn) prevBtn.addEventListener('click', ()=>{ prev(); auto(); });
+  root.addEventListener('mouseenter', ()=> clearInterval(timer));
+  root.addEventListener('mouseleave', auto);
+  go(0); auto();
+}
+
+function initAnchors(){
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('a[href^="#"]'); if(!a) return;
+    const id = a.getAttribute('href'); if(id.length<=1) return;
+    const el = document.querySelector(id); if(!el) return;
+    e.preventDefault();
+    $('#filters').classList.remove('show'); $('#cart').classList.remove('show'); $('#mask').classList.remove('on');
+    el.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+}
+
+function boot(){
+  initChips();
+  initCats();
+  initTags();
+  initSearch();
+  initPrice();
+  initSort();
+  initFilterButtons();
+  initCarouselById('promoCarousel');
+  initCarouselById('topCarousel');
+  initAnchors();
+  updateCartUI();
+  render();
+}
+if(document.readyState !== 'loading') boot();
+else document.addEventListener('DOMContentLoaded', boot);
+</script>
